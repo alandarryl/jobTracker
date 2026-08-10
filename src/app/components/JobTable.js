@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getDaysSince, getFeedbackStatus } from '../lib/dateUtils'
+import EditJobModal from './EditJobModal'
 
 export default function JobTable() {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedApp, setSelectedApp] = useState(null) // Application sélectionnée pour modification
 
-  // Récupération des candidatures depuis Supabase
   const fetchApplications = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -28,126 +29,160 @@ export default function JobTable() {
     fetchApplications()
   }, [])
 
-  // Mettre à jour le statut directement dans le tableau
+  // Changement rapide de statut via le menu déroulant
   const handleStatusChange = async (id, newStatus) => {
     const { error } = await supabase
       .from('applications')
       .update({ status: newStatus })
       .eq('id', id)
 
-    if (error) {
-      console.error('Erreur mise à jour :', error.message)
-    } else {
-      // Recharger la liste pour refléter le changement
-      fetchApplications()
+    if (!error) fetchApplications()
+  }
+
+  // Suppression d'une candidature
+  const handleDelete = async (id, company) => {
+    const confirmDelete = window.confirm(
+      `Voulez-vous vraiment supprimer la candidature pour "${company}" ?`
+    )
+
+    if (confirmDelete) {
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        console.error('Erreur suppression :', error.message)
+      } else {
+        fetchApplications()
+      }
     }
   }
 
   if (loading) {
-    return <p className="p-4 text-gray-500">Chargement de vos candidatures...</p>
+    return <p className="p-4 text-slate-500">Chargement de vos candidatures...</p>
   }
 
   if (applications.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-500 border rounded-lg bg-gray-50">
+      <div className="p-6 text-center text-slate-500 border rounded-xl bg-white">
         Aucune candidature enregistrée pour le moment.
       </div>
     )
   }
 
   return (
-    <div className="overflow-x-auto w-full shadow-sm rounded-lg border border-gray-200">
-      <table className="min-w-full bg-white text-left text-sm">
-        <thead className="bg-gray-100 text-gray-700 uppercase text-xs font-semibold">
-          <tr>
-            <th className="p-3">Entreprise / Poste</th>
-            <th className="p-3">Contrat</th>
-            <th className="p-3">Statut</th>
-            <th className="p-3">Dépôt du CV</th>
-            <th className="p-3">Durée d'attente</th>
-            <th className="p-3">Suivi de retour</th>
-            <th className="p-3">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 text-gray-800">
-          {applications.map((app) => {
-            const daysSince = getDaysSince(app.applied_at)
-            const feedback = getFeedbackStatus(app.applied_at, app.expected_feedback_days)
+    <>
+      <div className="overflow-x-auto w-full shadow-sm rounded-xl border border-slate-200">
+        <table className="min-w-full bg-white text-left text-sm">
+          <thead className="bg-slate-100 text-slate-700 uppercase text-xs font-semibold">
+            <tr>
+              <th className="p-3">Entreprise / Poste</th>
+              <th className="p-3">Contrat</th>
+              <th className="p-3">Statut</th>
+              <th className="p-3">Dépôt CV</th>
+              <th className="p-3">Attente</th>
+              <th className="p-3">Suivi Retour</th>
+              <th className="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 text-slate-800">
+            {applications.map((app) => {
+              const daysSince = getDaysSince(app.applied_at)
+              const feedback = getFeedbackStatus(app.applied_at, app.expected_feedback_days)
 
-            return (
-              <tr key={app.id} className="hover:bg-gray-50 transition-colors">
-                {/* Entreprise & Poste */}
-                <td className="p-3 font-medium">
-                  <div className="text-gray-900 font-semibold">{app.position_title}</div>
-                  <div className="text-xs text-gray-500">{app.company_name}</div>
-                </td>
+              return (
+                <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-3 font-medium">
+                    <div className="text-slate-900 font-semibold">{app.position_title}</div>
+                    <div className="text-xs text-slate-500">{app.company_name}</div>
+                  </td>
 
-                {/* Type de contrat */}
-                <td className="p-3">
-                  <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-300">
-                    {app.contract_type}
-                  </span>
-                </td>
+                  <td className="p-3">
+                    <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-300">
+                      {app.contract_type}
+                    </span>
+                  </td>
 
-                {/* Statut avec badge couleur */}
-                <td className="p-3">
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      app.status === 'Accepté'
-                        ? 'bg-green-100 text-green-800'
-                        : app.status === 'Rejeté'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {app.status}
-                  </span>
-                </td>
-
-                {/* Date d'envoi */}
-                <td className="p-3 text-gray-600">
-                  {new Date(app.applied_at).toLocaleDateString('fr-FR')}
-                </td>
-
-                {/* Temps écoulé depuis le dépôt */}
-                <td className="p-3 font-medium">
-                  {daysSince === 0 ? "Aujourd'hui" : `${daysSince} jour(s)`}
-                </td>
-
-                {/* Suivi retour & alerte */}
-                <td className="p-3">
-                  {app.status === 'En attente' ? (
-                    <span
-                      className={`text-xs px-2 py-1 rounded font-medium ${
-                        feedback.alert
-                          ? 'bg-red-100 text-red-700 font-bold border border-red-200'
-                          : 'bg-blue-50 text-blue-700'
+                  <td className="p-3">
+                    <select
+                      value={app.status}
+                      onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                      className={`px-2 py-1 rounded-full text-xs font-bold border-none outline-none cursor-pointer ${
+                        app.status === 'Accepté'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : app.status === 'Rejeté'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {feedback.text}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-400">Terminé</span>
-                  )}
-                </td>
+                      <option value="En attente">En attente</option>
+                      <option value="Accepté">Accepté</option>
+                      <option value="Rejeté">Rejeté</option>
+                    </select>
+                  </td>
 
-                {/* Changement rapide de statut */}
-                <td className="p-3">
-                  <select
-                    value={app.status}
-                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                    className="border border-gray-300 rounded p-1 text-xs bg-white text-gray-700"
-                  >
-                    <option value="En attente">En attente</option>
-                    <option value="Accepté">Accepté</option>
-                    <option value="Rejeté">Rejeté</option>
-                  </select>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <td className="p-3 text-slate-600">
+                    {new Date(app.applied_at).toLocaleDateString('fr-FR')}
+                  </td>
+
+                  <td className="p-3 font-medium">
+                    {daysSince === 0 ? "Aujourd'hui" : `${daysSince} j`}
+                  </td>
+
+                  <td className="p-3">
+                    {app.status === 'En attente' ? (
+                      <span
+                        className={`text-xs px-2 py-1 rounded font-medium ${
+                          feedback.alert
+                            ? 'bg-rose-100 text-rose-700 font-bold border border-rose-200'
+                            : 'bg-blue-50 text-blue-700'
+                        }`}
+                      >
+                        {feedback.text}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Terminé</span>
+                    )}
+                  </td>
+
+                  {/* Actions (Édition + Suppression) */}
+                  <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                    <button
+                      onClick={() => setSelectedApp(app)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      title="Éditer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(app.id, app.company_name)}
+                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal de modification quand une candidature est sélectionnée */}
+      {selectedApp && (
+        <EditJobModal
+          application={selectedApp}
+          onClose={() => setSelectedApp(null)}
+          onUpdated={fetchApplications}
+        />
+      )}
+    </>
   )
 }
