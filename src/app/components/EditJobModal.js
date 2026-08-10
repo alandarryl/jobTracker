@@ -12,6 +12,8 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
     status: application.status || 'En attente',
     applied_at: application.applied_at || '',
     expected_feedback_days: application.expected_feedback_days || 14,
+    job_link: application.job_link || '',            // Nouveau champ
+    contact_email: application.contact_email || '',  // Nouveau champ
     notes: application.notes || '',
   })
 
@@ -26,9 +28,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
 
     setLoading(false)
 
-    if (error) {
-      console.error('Erreur de mise à jour :', error.message)
-    } else {
+    if (!error) {
       onUpdated()
       onClose()
     }
@@ -36,25 +36,16 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b pb-3">
-          <h3 className="text-lg font-bold text-slate-800">
-            Modifier la candidature
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 font-bold"
-          >
-            ✕
-          </button>
+          <h3 className="text-lg font-bold text-slate-800">Modifier la candidature</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Entreprise
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Entreprise</label>
               <input
                 type="text"
                 required
@@ -64,9 +55,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Poste
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Poste</label>
               <input
                 type="text"
                 required
@@ -79,9 +68,28 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Contrat
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Lien de l'offre</label>
+              <input
+                type="url"
+                value={form.job_link}
+                onChange={(e) => setForm({ ...form, job_link: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg p-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Email recruteur</label>
+              <input
+                type="email"
+                value={form.contact_email}
+                onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg p-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Contrat</label>
               <select
                 value={form.contract_type}
                 onChange={(e) => setForm({ ...form, contract_type: e.target.value })}
@@ -94,9 +102,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Statut
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Statut</label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
@@ -111,9 +117,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Date d'envoi
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Date d'envoi</label>
               <input
                 type="date"
                 required
@@ -123,9 +127,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Délai retour (jours)
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Délai retour (jours)</label>
               <input
                 type="number"
                 value={form.expected_feedback_days}
@@ -136,9 +138,7 @@ export default function EditJobModal({ application, onClose, onUpdated }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Notes
-            </label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
             <textarea
               rows="2"
               value={form.notes}

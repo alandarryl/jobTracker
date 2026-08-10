@@ -8,7 +8,7 @@ import EditJobModal from './EditJobModal'
 export default function JobTable() {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedApp, setSelectedApp] = useState(null) // Application sélectionnée pour modification
+  const [selectedApp, setSelectedApp] = useState(null)
 
   const fetchApplications = async () => {
     setLoading(true)
@@ -29,7 +29,6 @@ export default function JobTable() {
     fetchApplications()
   }, [])
 
-  // Changement rapide de statut via le menu déroulant
   const handleStatusChange = async (id, newStatus) => {
     const { error } = await supabase
       .from('applications')
@@ -39,29 +38,14 @@ export default function JobTable() {
     if (!error) fetchApplications()
   }
 
-  // Suppression d'une candidature
   const handleDelete = async (id, company) => {
-    const confirmDelete = window.confirm(
-      `Voulez-vous vraiment supprimer la candidature pour "${company}" ?`
-    )
-
-    if (confirmDelete) {
-      const { error } = await supabase
-        .from('applications')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        console.error('Erreur suppression :', error.message)
-      } else {
-        fetchApplications()
-      }
+    if (window.confirm(`Voulez-vous vraiment supprimer la candidature pour "${company}" ?`)) {
+      const { error } = await supabase.from('applications').delete().eq('id', id)
+      if (!error) fetchApplications()
     }
   }
 
-  if (loading) {
-    return <p className="p-4 text-slate-500">Chargement de vos candidatures...</p>
-  }
+  if (loading) return <p className="p-4 text-slate-500">Chargement de vos candidatures...</p>
 
   if (applications.length === 0) {
     return (
@@ -79,6 +63,7 @@ export default function JobTable() {
             <tr>
               <th className="p-3">Entreprise / Poste</th>
               <th className="p-3">Contrat</th>
+              <th className="p-3">Liens & Contact</th>
               <th className="p-3">Statut</th>
               <th className="p-3">Dépôt CV</th>
               <th className="p-3">Attente</th>
@@ -102,6 +87,39 @@ export default function JobTable() {
                     <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-300">
                       {app.contract_type}
                     </span>
+                  </td>
+
+                  {/* NOUVELLE COLONNE: Liens et Email */}
+                  <td className="p-3">
+                    <div className="flex items-center space-x-2">
+                      {app.job_link ? (
+                        <a
+                          href={app.job_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 p-1.5 rounded-md transition-colors"
+                          title="Ouvrir le lien de l'offre"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-300">-</span>
+                      )}
+
+                      {app.contact_email ? (
+                        <a
+                          href={`mailto:${app.contact_email}`}
+                          className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-1.5 rounded-md transition-colors"
+                          title={`Envoyer un email à ${app.contact_email}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </a>
+                      ) : null}
+                    </div>
                   </td>
 
                   <td className="p-3">
@@ -146,7 +164,6 @@ export default function JobTable() {
                     )}
                   </td>
 
-                  {/* Actions (Édition + Suppression) */}
                   <td className="p-3 text-right space-x-2 whitespace-nowrap">
                     <button
                       onClick={() => setSelectedApp(app)}
@@ -175,7 +192,6 @@ export default function JobTable() {
         </table>
       </div>
 
-      {/* Modal de modification quand une candidature est sélectionnée */}
       {selectedApp && (
         <EditJobModal
           application={selectedApp}
