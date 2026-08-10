@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
-export default function Sidebar({ activePage, setActivePage }) {
+export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const pathname = usePathname()
 
-  // Liste des éléments de navigation
   const navItems = [
     {
-      id: 'dashboard',
+      href: '/dashboard',
       label: 'Tableau de bord',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17,7 +19,7 @@ export default function Sidebar({ activePage, setActivePage }) {
       ),
     },
     {
-      id: 'applications',
+      href: '/applications',
       label: 'Candidatures',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,7 +28,16 @@ export default function Sidebar({ activePage, setActivePage }) {
       ),
     },
     {
-      id: 'stats',
+      href: '/add-job',
+      label: 'Ajouter une candidature',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+    },
+    {
+      href: '/stats',
       label: 'Statistiques',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,7 +46,7 @@ export default function Sidebar({ activePage, setActivePage }) {
       ),
     },
     {
-      id: 'settings',
+      href: '/settings',
       label: 'Paramètres',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +63,6 @@ export default function Sidebar({ activePage, setActivePage }) {
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
-      {/* Bouton de bascule rétractable */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="absolute -right-3 top-8 bg-indigo-600 text-white rounded-full p-1 shadow-lg hover:bg-indigo-500 focus:outline-none transition-transform duration-200"
@@ -68,7 +78,6 @@ export default function Sidebar({ activePage, setActivePage }) {
         </svg>
       </button>
 
-      {/* En-tête / Logo */}
       <div className="p-4">
         <div className="flex items-center space-x-3 overflow-hidden">
           <div className="bg-indigo-600 text-white font-black text-xl rounded-xl min-w-[40px] h-10 flex items-center justify-center shadow-md shadow-indigo-500/20">
@@ -81,15 +90,14 @@ export default function Sidebar({ activePage, setActivePage }) {
           )}
         </div>
 
-        {/* Liens de navigation */}
         <nav className="mt-8 space-y-2">
           {navItems.map((item) => {
-            const isActive = activePage === item.id
+            const isActive = pathname === item.href
             return (
-              <button
-                key={item.id}
-                onClick={() => setActivePage(item.id)}
-                className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-indigo-600/10 text-indigo-400 border-l-4 border-indigo-500 rounded-l-none'
                     : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
@@ -102,13 +110,12 @@ export default function Sidebar({ activePage, setActivePage }) {
                 {!isCollapsed && (
                   <span className="truncate whitespace-nowrap">{item.label}</span>
                 )}
-              </button>
+              </Link>
             )
           })}
         </nav>
       </div>
 
-      {/* Profil / Bas de page */}
       <div className="p-4 border-t border-slate-800/60">
         <div className="flex items-center space-x-3 overflow-hidden">
           <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white min-w-[36px]">
