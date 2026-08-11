@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabaseClient'
 export default function ContactsPage() {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('Tous')
 
@@ -26,7 +28,11 @@ export default function ContactsPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (!error) setContacts(data || [])
+    if (error) {
+      console.error('Erreur de chargement:', error.message)
+    } else {
+      setContacts(data || [])
+    }
     setLoading(false)
   }
 
@@ -36,37 +42,62 @@ export default function ContactsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name) return
+    setErrorMessage('')
 
-    const { error } = await supabase.from('contacts').insert([
-      {
-        ...form,
+    if (!form.name.trim()) {
+      setErrorMessage('Le nom du contact est obligatoire.')
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      const payload = {
+        name: form.name,
+        company: form.company || null,
+        type: form.type,
+        email: form.email || null,
+        phone: form.phone || null,
+        notes: form.notes || null,
         last_contacted_at: form.last_contacted_at || null,
-      },
-    ])
+      }
 
-    if (!error) {
-      setForm({
-        name: '',
-        company: '',
-        type: "Agence d'intérim",
-        email: '',
-        phone: '',
-        notes: '',
-        last_contacted_at: '',
-      })
-      fetchContacts()
+      const { error } = await supabase.from('contacts').insert([payload])
+
+      if (error) {
+        console.error('Erreur Supabase lors de l\'insertion:', error)
+        setErrorMessage(`Impossible d'enregistrer : ${error.message}`)
+      } else {
+        setForm({
+          name: '',
+          company: '',
+          type: "Agence d'intérim",
+          email: '',
+          phone: '',
+          notes: '',
+          last_contacted_at: '',
+        })
+        await fetchContacts()
+      }
+    } catch (err) {
+      console.error('Erreur inattendue:', err)
+      setErrorMessage('Une erreur est survenue lors de l\'envoi.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleDelete = async (id) => {
     if (confirm('Voulez-vous vraiment supprimer ce contact ?')) {
       const { error } = await supabase.from('contacts').delete().eq('id', id)
-      if (!error) fetchContacts()
+      if (error) {
+        alert(`Erreur de suppression: ${error.message}`)
+      } else {
+        fetchContacts()
+      }
     }
   }
 
-  // Filtrage combiné par recherche textuelle et par type
   const filteredContacts = contacts.filter((c) => {
     const matchesSearch =
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,7 +108,6 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      {/* En-tête */}
       <header className="pb-4 border-b border-slate-200 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Annuaire de Contacts</h1>
@@ -94,6 +124,12 @@ export default function ContactsPage() {
       {/* Formulaire d'ajout */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <h2 className="text-base font-bold text-slate-800">Ajouter un nouveau contact</h2>
+
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-lg font-medium">
+            {errorMessage}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -182,14 +218,15 @@ export default function ContactsPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
+            disabled={submitting}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
           >
-            Enregistrer le contact
+            {submitting ? 'Enregistrement...' : 'Enregistrer le contact'}
           </button>
         </div>
       </form>
 
-      {/* Barre de recherche et filtres */}
+      {/* Recherche et filtres */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <input
           type="text"
@@ -217,7 +254,7 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Grille des cartes de contacts */}
+      {/* Cartes de contacts */}
       {loading ? (
         <p className="text-slate-500 text-sm">Chargement des contacts...</p>
       ) : filteredContacts.length === 0 ? (
